@@ -8,6 +8,8 @@ verify_ssl = true
 [packages]
 pandas = "*"
 pdfkit = "*"
+xlrd = "*"
+lxml = "*"
 
 [requires]
 python_version = "3.6"

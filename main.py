@@ -3,11 +3,15 @@ import zipfile
 import numpy as np
 import math
 import json
+import functools
+import sys
+import pdfkit
 
 SID_COLUMN = 3
 NAME_COLUMN = 2
 RUBRIC_PREVIOUS_COLUMN_NAME = "Submission Time"
 POINT_VALUES_FIRST_COLUMN = 6
+OUTPUT_DIR = "outputs"
 
 class Student:
     def __init__(self, sid = None, name = ""):
@@ -17,6 +21,7 @@ class Student:
         self.parts = {}
         self.qscores = {}
         self.logs = []
+        self.tutorial = "XXX"
 
 class QScore:
     def __init__(self):
@@ -191,17 +196,6 @@ def find_row( df, col1):
             return r
     assert False
 
-questions = []
-students = {}
-
-zf = zipfile.ZipFile('data1.zip')
-
-assert( zf)
-for info in zf.infolist():
-    if not info.filename.endswith(".csv"):
-        continue
-    df = pd.read_csv(zf.open(info.filename), dtype=str)
-    q = process_question( info.filename, df)
 
 def mycmp(log1, log2):
     q1,q2 = log1.question, log2.question
@@ -221,15 +215,101 @@ def mycmp(log1, log2):
             pass
     return 0
 
-import functools
-for id,s in students.items():
-    s.logs.sort( key=functools.cmp_to_key(mycmp))
 
-print("==== summary ========")
-print("len(students) = ", len(students))
-for id,s in students.items():
-    print( f"{s.name} ({s.sid}) {id}")
-    for l in s.logs:
-        if l.type == "total":
+questions = []
+students = {}
+
+def usage():
+    print("Usage: main evals.zip roster.[csv|xls]")
+    sys.exit(-1)
+
+def main(argv):
+
+    if len(argv) != 3:
+        usage()
+
+    try:
+        zf = zipfile.ZipFile( argv[1])
+    except:
+        print(f"Could not open {argv[1]}")
+        sys.exit(-1)
+
+    try:
+        rosterf = pd.read_csv( argv[2])
+    except:
+        print(f"Could not open roster {argv[2]} as CSV")
+        sys.exit(-1)
+
+    assert zf
+    for info in zf.infolist():
+        if not info.filename.endswith(".csv"):
             continue
-        print("  ", l)
+        df = pd.read_csv(zf.open(info.filename), dtype=str)
+        q = process_question( info.filename, df)
+
+    # for every student try to find their tutorial in roster
+    for index, row in rosterf.iterrows():
+        sid = row["ID"]
+        student = students.get( sid, None)
+        if student is None:
+            print("roster: no student", sid)
+            continue
+        tutorial = row["TUT"]
+        student.tutorial = tutorial
+        student.name2 = row["Name"]
+
+
+    for id,s in students.items():
+        s.logs.sort( key=functools.cmp_to_key(mycmp))
+
+    print("==== summary ========")
+    print("len(students) = ", len(students))
+    for id,s in students.items():
+        print( f"{s.name} ({s.sid}) {id} {s.tutorial}")
+        for l in s.logs:
+            if l.type == "total":
+                continue
+            print("  ", l)
+        
+        student_name = s.name2
+        student_name = student_name.replace(',', ', ')
+        student_name = student_name.replace('  ', ' ')
+        base_name = f"{OUTPUT_DIR}/{s.tutorial}-{student_name}-{s.sid}"
+        base_name = base_name.replace(' ', '_')
+        base_name = base_name.lower()
+        html_fname = base_name + ".html"
+        f = open( html_fname, "w")
+        f.write('''<link rel="stylesheet" href="../style.css">''' + "\n")
+        f.write('''<div style="height: 3em"></div>''' + "\n")
+        f.write('''<div id="sinfoc">''' + "\n")
+        f.write('''<div id="sinfo">''' + "\n")
+        f.write(student_name + " (" + s.sid + ")")
+        f.write('''<br>''' + "\n")
+        f.write(s.tutorial + "\n")
+        f.write('''</div>''' + "\n")
+        f.write('''</div>''' + "\n")
+        f.write('''<div style="height: 3em"></div>''' + "\n")
+        f.write('''<table class="detailsTable">''' + "\n")
+        f.write('''<thead><tr>''' + "\n")
+        f.write('''<th width="10%">Question</th>''' + "\n")
+        f.write('''<th width="10%">Deduction</th>''' + "\n")
+        f.write('''<th>Reason</th>''' + "\n")
+        f.write('''</tr></thead>''' + "\n")
+        f.write('''<tbody>''' + "\n")
+
+        for log in s.logs:
+            if log.type == "total":
+                continue
+            if log.type == "deduction":
+                f.write(f"<tr><td>{log.question}</td><td>{log.comments[0]}</td><td>{log.comments[1]}</td></tr>")
+            else:
+                f.write(f"<tr><td>{log.question}</td><td>{log.type}</td><td>{','.join(log.comments)}</td></tr>")
+        f.write('''</tbody></table>''' + "\n")
+        f.close()
+
+        pdf_fname = base_name + ".pdf"
+        # pdfkit.from_file( html_fname, pdf_fname)
+
+
+if __name__ == "__main__":
+    main(sys.argv)
