@@ -1,0 +1,52 @@
+table.detailsTable {
+  font-family: Verdana, Geneva, sans-serif;
+  border: 1px solid #1C6EA4;
+  border: none;
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+table.detailsTable td, table.detailsTable th {
+  border: 0px solid #AAAAAA;
+  padding: 0.5em 1em;
+}
+table.detailsTable tbody td {
+  font-size: 15px;
+}
+
+table.detailsTable tbody tr {
+    border-top: 1px solid #aaa;
+}
+
+table.detailsTable tr:nth-child(even) {
+#  background: #D0E4F5;
+}
+table.detailsTable thead {
+#  background: #1C6EA4;
+}
+table.detailsTable thead th {
+  font-size: 15px;
+  font-weight: bold;
+}
+
+#sinfo {
+    padding: 10px;
+    #    background: yellow;
+    background: #eef;
+    font-size: 32px;
+    padding: 10px;
+    padding-left: 1em;
+    padding-right: 1em;
+    border-radius: 15px;
+#    border: 2px solid blue;
+    margin: 5px;
+    text-align: right;
+}
+
+#sinfoc {
+    display: flex;
+    justify-content: flex-end;
+}
+
+			 
